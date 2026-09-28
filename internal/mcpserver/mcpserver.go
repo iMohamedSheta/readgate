@@ -391,7 +391,7 @@ func (s *Server) handleMCP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		writeJSON(w, map[string]any{
 			"name": "readgate", "version": "0.1.0",
-			"description": "AI-safe read-only database gateway. SSH tunnels + verified read-only users + fleet clusters.",
+			"description": "ReadGate read-only database gateway. SSH tunnels + verified read-only users + fleet clusters.",
 			"tools": toolList(),
 		})
 		return

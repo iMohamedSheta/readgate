@@ -406,7 +406,7 @@ func (a *App) EnableSource(src model.Source, checks []model.CheckResult) (model.
 
 func (a *App) GenerateProvisionSQL(engine, dbName, aiUser, aiPass string) string {
 	if model.Engine(engine) == model.EngineSQLite {
-		return "-- SQLite needs no users or grants.\n-- Access control = file permissions + the gateway opening\n-- every database read-only (mode=ro, query_only=ON).\n-- Keep the .db file readable by you, and it stays AI-safe."
+		return "-- SQLite needs no users or grants.\n-- Access control = file permissions + the gateway opening\n-- every database read-only (mode=ro, query_only=ON).\n-- Keep the .db file readable by you, and it stays read-only."
 	}
 	if model.Engine(engine) == model.EngineTurso {
 		return "-- Turso needs no users or grants.\n-- Create a database token at https://turso.tech (or your sqld server),\n-- paste it as the auth token, and the gateway guards every query read-only."

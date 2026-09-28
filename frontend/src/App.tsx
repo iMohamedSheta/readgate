@@ -620,7 +620,6 @@ export default function App() {
           <div className="acc-bg acc-on flex h-7 w-7 items-center justify-center rounded-lg"><ShieldCheck size={16} strokeWidth={2.5} /></div>
           <div>
             <div className="text-sm font-bold tracking-tight text-white">ReadGate</div>
-            <div className="text-[10px] text-zinc-500">AI-safe DB gateway</div>
           </div>
           <Button variant="emerald" className="ml-auto !px-2 !py-1 text-[11px]" onClick={() => setWizard(true)}><Plus size={13} /> Add</Button>
         </div>
