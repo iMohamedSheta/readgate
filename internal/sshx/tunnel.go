@@ -1,3 +1,4 @@
+// Package sshx opens SSH tunnels and runs remote inspection commands.
 package sshx
 
 import (
@@ -14,10 +15,9 @@ import (
 
 // Tunnel forwards a remote DB port to a local ephemeral port.
 type Tunnel struct {
-	client   *ssh.Client
-	listener net.Listener
+	client    *ssh.Client
+	listener  net.Listener
 	LocalPort int
-	lnAddr   string
 }
 
 func expandPath(p string) string {

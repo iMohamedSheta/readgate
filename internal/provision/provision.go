@@ -1,3 +1,4 @@
+// Package provision generates read-only identity setup SQL.
 package provision
 
 import (

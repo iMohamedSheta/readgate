@@ -1,3 +1,4 @@
+// Package store persists the fleet in SQLite with AES-GCM secrets.
 package store
 
 import (

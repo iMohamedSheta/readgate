@@ -1,3 +1,5 @@
+// Package guard validates SQL: read-only statements for queries,
+// single INSERT/UPDATE/DELETE for confirmed app writes.
 package guard
 
 import (

@@ -79,14 +79,6 @@ func pushCheck(out *[]model.CheckResult, key, label string, fn func() (string, e
 	}
 }
 
-func shortErr(err error) string {
-	s := err.Error()
-	if len(s) > 160 {
-		return s[:160] + "…"
-	}
-	return s
-}
-
 // VerifyReadOnly proves a Turso endpoint is safe behind the gateway.
 // Keys select/write/ro mirror every other engine so the enable invariant
 // in app.go applies unchanged.

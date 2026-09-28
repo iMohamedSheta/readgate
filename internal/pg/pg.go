@@ -1,3 +1,4 @@
+// Package pg implements the ReadGate gateway for the Postgres wire family.
 package pg
 
 import (
@@ -16,11 +17,6 @@ import (
 	"readgate/internal/sshx"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-type Probe struct {
-	DSN       string
-	viaTunnel *sshx.Tunnel
-}
 
 // dsnFor builds a properly escaped connection string.
 // Passwords with @ : / ? # & must be percent-encoded, otherwise the URL

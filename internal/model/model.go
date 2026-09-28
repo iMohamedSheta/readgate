@@ -1,8 +1,8 @@
+// Package model holds the shared fleet types. Timestamps are RFC3339
+// strings, not time.Time: Wails cannot bind time.Time and JSON "" fails
+// to unmarshal into it, which made creates fail silently.
 package model
-
-// NOTE: timestamps are RFC3339 strings, not time.Time.
-// Wails cannot bind time.Time and JSON "" fails to unmarshal into it,
-// which made creates fail silently. Strings survive both.
+// Cluster groups fleet sources (Production, Analytics, …).
 type Cluster struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`

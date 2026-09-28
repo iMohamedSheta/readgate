@@ -1,3 +1,4 @@
+// Package applog is the backend diagnostic log (no secrets inside).
 package applog
 
 import (

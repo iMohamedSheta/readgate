@@ -1,3 +1,4 @@
+// Package mcpserver exposes the fleet over MCP (stdio + HTTP), names only.
 package mcpserver
 
 import (
