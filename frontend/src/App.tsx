@@ -617,10 +617,12 @@ export default function App() {
       <>
       <aside className="glassbar flex min-h-0 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/60" style={{ width: sideW }}>
         <div className="flex items-center gap-2 px-3 pb-2.5 pt-3">
-          <div className="acc-bg acc-on flex h-7 w-7 items-center justify-center rounded-lg"><ShieldCheck size={16} strokeWidth={2.5} /></div>
-          <div>
-            <div className="text-sm font-bold tracking-tight text-white">ReadGate</div>
-          </div>
+          <img
+            src={appearance.theme === 'light' ? '/light.png' : '/dark.png'}
+            alt="readgate"
+            className="h-8 w-auto max-w-[150px] shrink-0 object-contain"
+            draggable={false}
+          />
           <Button variant="emerald" className="ml-auto !px-2 !py-1 text-[11px]" onClick={() => setWizard(true)}><Plus size={13} /> Add</Button>
         </div>
 

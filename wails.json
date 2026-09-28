@@ -1,18 +1,18 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "ReadGate",
-  "outputfilename": "ReadGate",
+  "name": "readgate",
+  "outputfilename": "readgate",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "author": {
-    "name": "ReadGate",
+    "name": "readgate",
     "email": ""
   },
   "info": {
-    "companyName": "ReadGate",
-    "productName": "ReadGate",
+    "companyName": "readgate",
+    "productName": "readgate",
     "productVersion": "0.1.0",
     "copyright": "",
     "comments": "Read-only AI gateway for your database fleet. SSH tunnels, verified read-only users, MCP for opencode/Claude."
