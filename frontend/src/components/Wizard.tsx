@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, Copy, Database, Dices, FolderOpen, KeyRound, Loader2, Plug2, Save, Server, ShieldCheck, TerminalSquare, UserPlus, X } from 'lucide-react';
 import { api } from '../lib/api';
 import type { CheckResult, Source } from '../lib/types';
@@ -50,11 +50,15 @@ export default function AddDatabaseWizard({ open, clusters, initial, editing, on
   const [err, setErr] = useState('');
   const [sqlPreview, setSqlPreview] = useState('');
   const [step, setStep] = useState<'form' | 'verify' | 'done'>('form');
+  // True once the user has touched the cluster dropdown this session —
+  // auto-defaulting must never clobber an explicit (incl. Ungrouped) pick.
+  const touchedCluster = useRef(false);
 
   useEffect(() => {
     if (open) {
       setChecks(null); setStep('form'); setTesting(false);
       setErr(''); setSshMsg('');
+      touchedCluster.current = false;
       if (editing) {
         setForm({
           name: editing.name, engine: editing.engine, mode: editing.mode,
@@ -69,11 +73,27 @@ export default function AddDatabaseWizard({ open, clusters, initial, editing, on
         });
       } else {
         if (initial) setForm((f: any) => ({ ...f, ...initial }));
+        // Default to the first cluster when the stored id is empty or stale
+        // (form mounts before clusters load, so the initial useState default is '').
+        setForm((f: any) => (!f.clusterId || !clusters.some((c: any) => c.id === f.clusterId))
+          ? { ...f, clusterId: clusters[0]?.id || '' }
+          : f);
         api.NewAIPassword().then((p: any) => setForm((f: any) => ({ ...f, aiPassword: f.aiPassword || String(p) }))).catch(() => {});
         api.DefaultSSHKey().then((p: any) => setForm((f: any) => ({ ...f, sshKeyPath: f.sshKeyPath || String(p) }))).catch(() => {});
       }
     }
   }, [open]);
+
+  // Clusters load async — if the wizard is already open with an empty/stale
+  // cluster id when they arrive, default to the first cluster (new adds only,
+  // and never after the user has touched the dropdown).
+  useEffect(() => {
+    if (open && !editing && !touchedCluster.current && clusters.length > 0) {
+      setForm((f: any) => (!f.clusterId || !clusters.some((c: any) => c.id === f.clusterId))
+        ? { ...f, clusterId: clusters[0].id }
+        : f);
+    }
+  }, [open, editing, clusters]);
 
   useEffect(() => {
     api.GenerateProvisionSQL(form.engine, form.database || 'connect_local', form.aiUser || 'ai_readonly', form.aiPassword || '').then((s: any) => setSqlPreview(String(s))).catch(() => {});
@@ -99,8 +119,11 @@ export default function AddDatabaseWizard({ open, clusters, initial, editing, on
   }
 
   function buildSrc(): Source {
+    // Never persist a stale id (cluster deleted while the wizard is open) —
+    // that would silently land the source in Ungrouped.
+    const clusterId = clusters.some((c) => c.id === form.clusterId) ? form.clusterId : '';
     return {
-      id: editing?.id || '', name: form.name || 'Untitled', clusterId: form.clusterId, engine: form.engine, mode: form.mode,
+      id: editing?.id || '', name: form.name || 'Untitled', clusterId, engine: form.engine, mode: form.mode,
       host: form.mode === 'ssh' ? '127.0.0.1' : (isFileish ? '' : form.host), port: isFileish ? 0 : (Number(form.port) || 5432),
       database: form.database, username: isSqlite ? 'ro' : (isTurso ? 'token' : form.aiUser), password: isSqlite ? '' : form.aiPassword,
       sshHost: form.sshHost, sshPort: Number(form.sshPort) || 22, sshUser: form.sshUser, sshAuth: form.sshAuth || 'key',
@@ -223,7 +246,8 @@ export default function AddDatabaseWizard({ open, clusters, initial, editing, on
               <Field label="Database name"><Input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Production" /></Field>
               <div>
                 <Label>Cluster (fleet group)</Label>
-                <select value={form.clusterId} onChange={(e) => set('clusterId', e.target.value)} className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none">
+                <select value={form.clusterId || ''} onChange={(e) => { touchedCluster.current = true; set('clusterId', e.target.value); }} className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none">
+                  <option value="">Ungrouped</option>
                   {clusters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
