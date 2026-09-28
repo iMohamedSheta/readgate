@@ -36,6 +36,7 @@ let memClusters: Cluster[] = [...demoClusters];
 const rnd = (n = 8) => Math.random().toString(36).slice(2, 2 + n);
 
 export const api = {
+  Version: binding('Version', async (): Promise<string> => 'dev'),
   ListClusters: binding('ListClusters', async (): Promise<Cluster[]> => memClusters),
   SaveCluster: binding('SaveCluster', async (c: Cluster): Promise<Cluster> => {
     if (!c.id) { c = { ...c, id: rnd(10) }; memClusters.push(c); return c; }

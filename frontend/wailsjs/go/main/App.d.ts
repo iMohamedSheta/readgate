@@ -93,6 +93,8 @@ export function TestSSH(arg1:model.Source):Promise<string>;
 
 export function TestSSHByID(arg1:string):Promise<string>;
 
+export function Version():Promise<string>;
+
 export function WriteMode():Promise<boolean>;
 
 export function WriteUserName(arg1:string):Promise<string>;

@@ -24,6 +24,7 @@ import (
 	"readgate/internal/provision"
 	"readgate/internal/sshx"
 	"readgate/internal/store"
+	"readgate/internal/version"
 
 	"readgate/internal/applog"
 
@@ -65,6 +66,9 @@ func (a *App) shutdown(ctx context.Context) {
 	a.mcp.Stop()
 	_ = a.store.Close()
 }
+
+// Version returns the baked-in release tag ("dev" for local builds).
+func (a *App) Version() string { return version.Version }
 
 // ---------- fleet ----------
 

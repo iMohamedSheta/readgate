@@ -99,6 +99,7 @@ export default function App() {
   const [logs, setLogs] = useState<string[]>([]);
   const [logPath, setLogPath] = useState('');
   const [allowWrites, setAllowWrites] = useState(false);
+  const [version, setVersion] = useState('dev');
 
   // resizable panels (drag the divider; persisted locally + in SQLite ui.*)
   function usePanelWidth(key: string, def: number, min: number, max: number) {
@@ -145,6 +146,10 @@ export default function App() {
   }
 
   useEffect(() => { refresh(); }, []);
+
+  useEffect(() => {
+    api.Version().then((v: any) => { if (v) setVersion(String(v)); }).catch(() => {});
+  }, []);
 
   // appearance: instant local first, then backend merge wins per key
   useEffect(() => { applyAppearance(appearance); }, [appearance]);
@@ -949,7 +954,7 @@ export default function App() {
         appearance={appearance} onPatch={patchAppearance}
         storePath={storePath} mcpUrl={mcpUrl} mcpConfig={mcpConfig}
         logs={logs} logPath={logPath} onReloadLogs={reloadLogs} onClearLogs={clearLogs}
-        writeMode={allowWrites} onToggleWriteMode={toggleWriteMode}
+        writeMode={allowWrites} onToggleWriteMode={toggleWriteMode} version={version}
         counts={{ sources: sources.length, clusters: clusters.length, verified: sources.filter((s) => s.readOnlyVerified).length }} />
     </div>
   );

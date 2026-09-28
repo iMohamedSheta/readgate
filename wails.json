@@ -12,7 +12,7 @@
   },
   "info": {
     "companyName": "ReadGate",
-    "productName": "ReadGate — AI-safe DB Gateway",
+    "productName": "ReadGate",
     "productVersion": "0.1.0",
     "copyright": "",
     "comments": "Read-only AI gateway for your database fleet. SSH tunnels, verified read-only users, MCP for opencode/Claude."

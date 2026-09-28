@@ -182,6 +182,10 @@ export function TestSSHByID(arg1) {
   return window['go']['main']['App']['TestSSHByID'](arg1);
 }
 
+export function Version() {
+  return window['go']['main']['App']['Version']();
+}
+
 export function WriteMode() {
   return window['go']['main']['App']['WriteMode']();
 }

@@ -46,7 +46,7 @@ function Switch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   );
 }
 
-export default function SettingsSheet({ open, onClose, appearance, onPatch, storePath, counts, mcpUrl, mcpConfig, logs, logPath, onReloadLogs, onClearLogs, writeMode, onToggleWriteMode }: {
+export default function SettingsSheet({ open, onClose, appearance, onPatch, storePath, counts, mcpUrl, mcpConfig, logs, logPath, onReloadLogs, onClearLogs, writeMode, onToggleWriteMode, version }: {
   open: boolean;
   onClose: () => void;
   appearance: Appearance;
@@ -61,6 +61,7 @@ export default function SettingsSheet({ open, onClose, appearance, onPatch, stor
   onClearLogs: () => void;
   writeMode: boolean;
   onToggleWriteMode: () => void;
+  version?: string;
 }) {
   const [copied, setCopied] = useState(false);
   const [stab, setStab] = useState<'general' | 'appearance' | 'data' | 'logs' | 'ai'>('appearance');
@@ -274,7 +275,7 @@ export default function SettingsSheet({ open, onClose, appearance, onPatch, stor
               </Button>
             </Section>
             <div className="flex items-center gap-1.5 px-1 text-[11px] text-zinc-600">
-              <Type size={11} /> ReadGate 0.1.0 · SSH tunnels · verified read-only · MCP 2024-11-05
+              <Type size={11} /> ReadGate {version || 'dev'} · SSH tunnels · verified read-only · MCP 2024-11-05
             </div>
           </>
         )}

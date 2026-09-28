@@ -1,0 +1,106 @@
+name: Release
+
+# Every push to main publishes a new version — but only if the shipped app
+# changed (Go code outside scripts/, frontend/, wails.json, go.mod/go.sum,
+# build/). Docs-only, CI/workflow, or script-only pushes are skipped and
+# batch up into the next app release instead.
+#   feat: / feat(scope):            -> minor bump (x.Y.0)
+#   fix:  / fix(scope):             -> patch bump (x.y.Z)
+#   "BREAKING CHANGE" or "type!:"   -> major bump (X.0.0)
+#   anything else (docs, chore...)  -> patch bump
+# Add "[skip release]" to the HEAD commit message to skip publishing.
+# The Windows exe is built with Wails, screenshotted while running with a
+# fresh isolated profile, and published as a GitHub Release
+# (ReadGate.exe + screenshot.png).
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute next version from conventional commits
+        id: version
+        shell: pwsh
+        run: ./scripts/next-version.ps1
+
+      - name: Set up Go
+        if: steps.version.outputs.skip != 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Node
+        if: steps.version.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Wails CLI
+        if: steps.version.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.2
+          "$(go env GOPATH)/bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Install frontend dependencies
+        if: steps.version.outputs.skip != 'true'
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Windows exe
+        if: steps.version.outputs.skip != 'true'
+        run: wails build -platform windows/amd64 -o ReadGate.exe -ldflags "-X readgate/internal/version.Version=${{ steps.version.outputs.next }}"
+
+      - name: Screenshot the running app
+        if: steps.version.outputs.skip != 'true'
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          ./scripts/screenshot.ps1 -ExePath "build/bin/ReadGate.exe" `
+            -OutFile "screenshot.png"
+
+      - name: Stage release assets
+        if: steps.version.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item build/bin/ReadGate.exe dist/ReadGate.exe
+          if (Test-Path screenshot.png) { Copy-Item screenshot.png dist/screenshot.png }
+          Get-ChildItem dist
+
+      - name: Publish GitHub Release
+        if: steps.version.outputs.skip != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.next }}
+          name: ${{ steps.version.outputs.next }}
+          body: |
+            ## What's changed (${{ steps.version.outputs.bump }})
+
+            ${{ steps.version.outputs.changelog }}
+
+            ---
+
+            ![ReadGate app screenshot](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.next }}/screenshot.png)
+
+            **Download:** `ReadGate.exe` below — single file, no installer, no DLLs.
+          files: dist/*

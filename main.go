@@ -2,10 +2,12 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"log"
 	"os"
 
 	"readgate/internal/mcpserver"
+	"readgate/internal/version"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -21,6 +23,10 @@ func main() {
 	if len(os.Args) > 1 && (os.Args[1] == "mcp" || os.Args[1] == "--mcp") {
 		os.Exit(mcpserver.Run())
 	}
+	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v" || os.Args[1] == "version") {
+		fmt.Println(version.Version)
+		return
+	}
 
 	app, err := NewApp()
 	if err != nil {
@@ -28,7 +34,7 @@ func main() {
 	}
 
 	err = wails.Run(&options.App{
-		Title:     "ReadGate — AI-safe DB Gateway",
+		Title:     "ReadGate",
 		Width:     1380,
 		Height:    900,
 		MinWidth:  900,

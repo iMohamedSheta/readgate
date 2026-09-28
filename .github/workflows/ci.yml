@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Go tests / static analysis / lint
+    # Windows: this ships as a Windows-only exe (frameless, WebView2).
+    # Windows CI compiles and tests exactly what ships, with zero setup.
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Fresh checkouts have no frontend/dist (gitignored build output), but
+      # main.go embeds it — so seed a placeholder before build/vet/test.
+      # (Real builds via `wails build` replace it with the compiled frontend.)
+      - name: Prepare embed dir
+        run: mkdir -p frontend/dist && touch frontend/dist/gitkeep
+
+      - name: Build
+        run: go build ./...
+
+      - name: Tests
+        run: go test ./... -count=1
+
+      - name: Vet (static analysis)
+        run: go vet ./...
+
+      - name: Staticcheck (deep static analysis + style lint)
+        run: |
+          set -e
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Staticcheck — bug detection
+        run: staticcheck ./...
+
+      - name: Style lint
+        run: staticcheck -checks "all" ./...
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
