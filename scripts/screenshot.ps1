@@ -1,4 +1,4 @@
-# Screenshot the ReadGate desktop app while it runs — good, seeded, stable.
+﻿# Screenshot the ReadGate desktop app while it runs — good, seeded, stable.
 #
 # What makes this one "good" (vs. a bare empty-profile capture):
 #   1. Fresh isolated profile (READGATE_HOME) seeded with SYNTHETIC demo data
@@ -63,8 +63,11 @@ $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--disable-gpu --disable-gpu-compos
 
 if (-not $NoSeed) {
   Write-Host "Seeding demo profile at $ProfileDir ..."
-  & $exe --shot-seed
-  if ($LASTEXITCODE -ne 0) { throw "--shot-seed failed with code $LASTEXITCODE" }
+  # NOTE: the built exe is a GUI-subsystem app, so `& $exe` returns
+  # immediately without waiting (leaving $LASTEXITCODE unset/empty, which
+  # trips the exit-code check). Start-Process -Wait actually waits.
+  $seed = Start-Process -FilePath $exe -ArgumentList '--shot-seed' -NoNewWindow -Wait -PassThru
+  if ($seed.ExitCode -ne 0) { throw "--shot-seed failed with code $($seed.ExitCode)" }
   Get-ChildItem $ProfileDir -Recurse | Format-Table Name, Length | Out-String | Write-Host
 }
 
