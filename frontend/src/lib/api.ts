@@ -1,5 +1,20 @@
 import type { CheckResult, Cluster, DoctorFinding, QueryResult, Source } from './types';
 
+export interface UpdateInfo {
+  currentVersion: string;
+  latestVersion: string;
+  releaseName: string;
+  notes: string;
+  pageUrl: string;
+  assetName: string;
+  downloadUrl: string;
+  size: number;
+  publishedAt: string;
+  updateAvailable: boolean;
+  canInstall: boolean;
+  platform: string;
+}
+
 // Wails binding shim.
 // Inside the desktop app every call hits the REAL Go backend and real
 // errors propagate (no silent fallbacks — fake data must never mask bugs).
@@ -146,6 +161,14 @@ export const api = {
   OpencodeConfig: binding('OpencodeConfig', async (): Promise<string> => `{\n  "$schema": "https://opencode.ai/config.json",\n  "mcp": {\n    "readgate": {\n      "type": "local",\n      "command": ["ReadGate", "mcp"],\n      "enabled": true\n    }\n  }\n}`),
   ClaudeConfig: binding('ClaudeConfig', async (): Promise<string> => `{\n  "mcpServers": {\n    "readgate": {\n      "command": "ReadGate",\n      "args": ["mcp"]\n    }\n  }\n}`),
   TestMCP: binding('TestMCP', async (): Promise<string> => 'stdio msg 1 → {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05",…}}\nstdio msg 2 → {"jsonrpc":"2.0","id":2,"result":{"tools":[…]}}\nstdio msg 3 → {"jsonrpc":"2.0","id":3,"result":{"content":[…]}}'),
+  CheckForUpdates: binding('CheckForUpdates', async (): Promise<UpdateInfo> => ({
+    currentVersion: 'dev', latestVersion: 'dev', releaseName: '', notes: '',
+    pageUrl: '', assetName: '', downloadUrl: '', size: 0, publishedAt: '',
+    updateAvailable: false, canInstall: false, platform: 'web',
+  })),
+  SkipUpdateVersion: binding('SkipUpdateVersion', async (): Promise<void> => {}),
+  OpenReleasePage: binding('OpenReleasePage', async (): Promise<string> => ''),
+  DownloadAndInstallUpdate: binding('DownloadAndInstallUpdate', async (): Promise<string> => 'web-dev mock: no updater here'),
   WriteMode: binding('WriteMode', async (): Promise<boolean> => false),
   SetWriteMode: binding('SetWriteMode', async (): Promise<void> => {}),
   HasWriteUser: binding('HasWriteUser', async (): Promise<boolean> => false),

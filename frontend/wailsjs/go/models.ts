@@ -432,3 +432,42 @@ export namespace model {
 
 }
 
+export namespace update {
+	
+	export class Info {
+	    currentVersion: string;
+	    latestVersion: string;
+	    releaseName: string;
+	    notes: string;
+	    pageUrl: string;
+	    assetName: string;
+	    downloadUrl: string;
+	    size: number;
+	    publishedAt: string;
+	    updateAvailable: boolean;
+	    canInstall: boolean;
+	    platform: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Info(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.currentVersion = source["currentVersion"];
+	        this.latestVersion = source["latestVersion"];
+	        this.releaseName = source["releaseName"];
+	        this.notes = source["notes"];
+	        this.pageUrl = source["pageUrl"];
+	        this.assetName = source["assetName"];
+	        this.downloadUrl = source["downloadUrl"];
+	        this.size = source["size"];
+	        this.publishedAt = source["publishedAt"];
+	        this.updateAvailable = source["updateAvailable"];
+	        this.canInstall = source["canInstall"];
+	        this.platform = source["platform"];
+	    }
+	}
+
+}
+

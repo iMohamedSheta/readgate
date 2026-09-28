@@ -6,6 +6,10 @@ export function BinaryName() {
   return window['go']['main']['App']['BinaryName']();
 }
 
+export function CheckForUpdates() {
+  return window['go']['main']['App']['CheckForUpdates']();
+}
+
 export function ClaudeConfig() {
   return window['go']['main']['App']['ClaudeConfig']();
 }
@@ -32,6 +36,10 @@ export function DeleteWriteUser(arg1) {
 
 export function DiagnoseServer(arg1) {
   return window['go']['main']['App']['DiagnoseServer'](arg1);
+}
+
+export function DownloadAndInstallUpdate() {
+  return window['go']['main']['App']['DownloadAndInstallUpdate']();
 }
 
 export function EnableSource(arg1, arg2) {
@@ -106,6 +114,10 @@ export function NewAIPassword() {
   return window['go']['main']['App']['NewAIPassword']();
 }
 
+export function OpenReleasePage(arg1) {
+  return window['go']['main']['App']['OpenReleasePage'](arg1);
+}
+
 export function OpencodeConfig() {
   return window['go']['main']['App']['OpencodeConfig']();
 }
@@ -156,6 +168,10 @@ export function SetSetting(arg1, arg2) {
 
 export function SetWriteMode(arg1) {
   return window['go']['main']['App']['SetWriteMode'](arg1);
+}
+
+export function SkipUpdateVersion(arg1) {
+  return window['go']['main']['App']['SkipUpdateVersion'](arg1);
 }
 
 export function StartMCP() {

@@ -6,10 +6,12 @@ import {
   Filter, Code2, RotateCcw,
 } from 'lucide-react';
 import { api } from './lib/api';
+import type { UpdateInfo } from './lib/api';
 import type { CheckResult, Cluster, Source, TableInfo } from './lib/types';
 import { applyAppearance, loadLocalAppearance, mergeSettingsMap, saveLocalAppearance, type Appearance } from './lib/appearance';
 import Menubar from './components/Menu';
 import SettingsSheet from './components/SettingsSheet';
+import UpdateBanner from './components/UpdateBanner';
 import type { Tab } from './components/menuTypes';
 import { Badge, Button, Card, Empty, IconBtn, Input, ConfirmModal } from './components/ui';
 import AddDatabaseWizard, { StatusDot } from './components/Wizard';
@@ -100,6 +102,14 @@ export default function App() {
   const [logPath, setLogPath] = useState('');
   const [allowWrites, setAllowWrites] = useState(false);
   const [version, setVersion] = useState('dev');
+  // self-update via GitHub Releases
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [updateBanner, setUpdateBanner] = useState(false);
+  const [updateChecking, setUpdateChecking] = useState(false);
+  const [updateBusy, setUpdateBusy] = useState(false);
+  const [updateMsg, setUpdateMsg] = useState('');
+  const [updateProgress, setUpdateProgress] = useState<{ written: number; total: number } | null>(null);
+  const updateChecked = useRef(false);
 
   // resizable panels (drag the divider; persisted locally + in SQLite ui.*)
   function usePanelWidth(key: string, def: number, min: number, max: number) {
@@ -209,6 +219,101 @@ export default function App() {
       setActionMsg('MCP config copied — paste into opencode.json');
     } catch (e: any) {
       setActionMsg('copy failed: ' + (e?.message || String(e)));
+    }
+  }
+
+  // ---------- self-update via GitHub Releases ----------
+  async function runUpdateCheck(manual: boolean) {
+    if (updateChecking) return null;
+    setUpdateChecking(true);
+    if (manual) setUpdateMsg('');
+    try {
+      const info = (await api.CheckForUpdates()) as unknown as UpdateInfo;
+      setUpdateInfo(info);
+      if (info?.updateAvailable) {
+        // honor "skip this version" for automatic popups, never for manual checks
+        if (!manual) {
+          try {
+            const m = (await api.GetSettings()) as unknown as Record<string, string>;
+            if (m?.['update.skipVersion'] === info.latestVersion) return info;
+          } catch {}
+        }
+        setUpdateBanner(true);
+      } else if (manual) {
+        setUpdateMsg(`You're on the latest version (${info?.currentVersion || version}).`);
+      }
+      return info;
+    } catch (e: any) {
+      if (manual) setUpdateMsg('update check failed: ' + (e?.message || String(e)));
+      return null;
+    } finally {
+      setUpdateChecking(false);
+    }
+  }
+
+  // One automatic check per session, shortly after startup. Manual checks
+  // (Settings → General → Updates) always hit the network. Auto checks are
+  // throttled to once per 24h and skipped when the user disabled them.
+  useEffect(() => {
+    if (updateChecked.current) return;
+    updateChecked.current = true;
+    const h = setTimeout(async () => {
+      try {
+        const m = (await api.GetSettings()) as unknown as Record<string, string>;
+        if (m?.['update.autoCheck'] === 'off') return;
+        const last = Date.parse(m?.['update.lastCheck'] || '');
+        if (Number.isFinite(last) && Date.now() - last < 24 * 3600 * 1000) return;
+      } catch {}
+      runUpdateCheck(false).catch(() => {});
+    }, 4000);
+    return () => clearTimeout(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Download progress comes from the Go updater via Wails events
+  // (window.runtime exists only inside the desktop webview — no-op in web dev).
+  useEffect(() => {
+    let off: (() => void) | undefined;
+    try {
+      const rt = (window as any).runtime;
+      if (rt?.EventsOn) off = rt.EventsOn('update:progress', (p: any) => {
+        const d = Array.isArray(p) ? p[0] : p;
+        if (d && typeof d.written === 'number') setUpdateProgress({ written: d.written, total: d.total || 0 });
+      });
+    } catch {}
+    return () => { try { off?.(); } catch {} };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function installUpdate() {
+    if (updateBusy) return;
+    setUpdateBusy(true);
+    setUpdateProgress(null);
+    setUpdateMsg('');
+    try {
+      const msg = String(await api.DownloadAndInstallUpdate());
+      setUpdateMsg(msg);
+    } catch (e: any) {
+      setUpdateMsg('update failed: ' + (e?.message || String(e)));
+    } finally {
+      setUpdateBusy(false);
+      setUpdateProgress(null);
+    }
+  }
+
+  async function skipUpdateVersion() {
+    if (updateInfo?.latestVersion) {
+      try { await api.SkipUpdateVersion(updateInfo.latestVersion); } catch {}
+    }
+    setUpdateBanner(false);
+  }
+
+  async function openReleasePage() {
+    try {
+      const err = String(await api.OpenReleasePage(updateInfo?.pageUrl || ''));
+      if (err) setUpdateMsg(err);
+    } catch (e: any) {
+      setUpdateMsg('could not open release page: ' + (e?.message || String(e)));
     }
   }
 
@@ -611,6 +716,11 @@ export default function App() {
         onCopyMCP={copyMCP}
         onOpenSettings={() => setSettingsOpen(true)}
         onToggleSidebar={() => setSideOpen((v) => !v)} />
+      {updateBanner && updateInfo?.updateAvailable && (
+        <UpdateBanner info={updateInfo} busy={updateBusy} progress={updateProgress}
+          onInstall={installUpdate} onNotes={openReleasePage}
+          onLater={() => setUpdateBanner(false)} onSkip={skipUpdateVersion} />
+      )}
       <div className="flex min-h-0 flex-1">
       {/* sidebar — fleet */}
       {sideOpen && (
@@ -904,14 +1014,15 @@ export default function App() {
         </div>
 
         {/* action results strip */}
-        {(actionChecks || actionMsg) && (
+        {(actionChecks || actionMsg || updateMsg) && (
           <div className="border-t border-zinc-800 bg-zinc-950 px-3 py-2">
             <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-1.5">
               {(actionChecks || []).map((c) => (
                 <Badge key={c.key} tone={c.ok ? 'green' : 'red'}>{c.ok ? '✓' : '✕'} {c.label} · <span className="font-mono opacity-70">{c.detail}</span></Badge>
               ))}
               {actionMsg && <span className="font-mono text-[11px] text-zinc-400">{actionMsg}</span>}
-              <button className="ml-auto rounded p-1 text-zinc-500 hover:text-zinc-200" onClick={() => { setActionChecks(null); setActionMsg(''); }}><X size={13} /></button>
+              {updateMsg && <span className="font-mono text-[11px] text-emerald-200/80">{updateMsg}</span>}
+              <button className="ml-auto rounded p-1 text-zinc-500 hover:text-zinc-200" onClick={() => { setActionChecks(null); setActionMsg(''); setUpdateMsg(''); }}><X size={13} /></button>
             </div>
           </div>
         )}
@@ -956,6 +1067,9 @@ export default function App() {
         storePath={storePath} mcpUrl={mcpUrl} mcpConfig={mcpConfig}
         logs={logs} logPath={logPath} onReloadLogs={reloadLogs} onClearLogs={clearLogs}
         writeMode={allowWrites} onToggleWriteMode={toggleWriteMode} version={version}
+        updateInfo={updateInfo} updateChecking={updateChecking} updateBusy={updateBusy}
+        updateMsg={updateMsg} onCheckUpdates={() => runUpdateCheck(true)}
+        onInstallUpdate={installUpdate} onOpenRelease={openReleasePage}
         counts={{ sources: sources.length, clusters: clusters.length, verified: sources.filter((s) => s.readOnlyVerified).length }} />
     </div>
   );

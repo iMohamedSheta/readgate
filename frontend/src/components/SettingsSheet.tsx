@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Check, Copy, Database, FileText, Layers, Moon, Sun, Palette, Plug2, RefreshCw, RotateCcw, Square, Trash2, Type, SlidersHorizontal, PencilLine, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowDownToLine, Check, Copy, Database, ExternalLink, FileText, Layers, Loader2, Moon, Sun, Palette, Plug2, RefreshCw, RotateCcw, Square, Trash2, Type, SlidersHorizontal, PencilLine, ShieldCheck } from 'lucide-react';
 import { ACCENTS, DEFAULT_APPEARANCE, FONT_SIZES, type Appearance } from '../lib/appearance';
 import { cn } from '../lib/cn';
+import { api, type UpdateInfo } from '../lib/api';
 import { Badge, Button, IconBtn, Sheet } from './ui';
 
 function Sub({ children }: { children: React.ReactNode }) {
@@ -46,7 +47,7 @@ function Switch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   );
 }
 
-export default function SettingsSheet({ open, onClose, appearance, onPatch, storePath, counts, mcpUrl, mcpConfig, logs, logPath, onReloadLogs, onClearLogs, writeMode, onToggleWriteMode, version }: {
+export default function SettingsSheet({ open, onClose, appearance, onPatch, storePath, counts, mcpUrl, mcpConfig, logs, logPath, onReloadLogs, onClearLogs, writeMode, onToggleWriteMode, version, updateInfo, updateChecking, updateBusy, updateMsg, onCheckUpdates, onInstallUpdate, onOpenRelease }: {
   open: boolean;
   onClose: () => void;
   appearance: Appearance;
@@ -62,9 +63,30 @@ export default function SettingsSheet({ open, onClose, appearance, onPatch, stor
   writeMode: boolean;
   onToggleWriteMode: () => void;
   version?: string;
+  updateInfo?: UpdateInfo | null;
+  updateChecking?: boolean;
+  updateBusy?: boolean;
+  updateMsg?: string;
+  onCheckUpdates?: () => void;
+  onInstallUpdate?: () => void;
+  onOpenRelease?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const [stab, setStab] = useState<'general' | 'appearance' | 'data' | 'logs' | 'ai'>('appearance');
+  const [autoCheck, setAutoCheck] = useState(true);
+  useEffect(() => {
+    if (!open) return;
+    api.GetSettings().then((m: any) => {
+      setAutoCheck(m?.['update.autoCheck'] !== 'off');
+    }).catch(() => {});
+  }, [open ]);
+  function toggleAutoCheck() {
+    setAutoCheck((v) => {
+      const next = !v;
+      api.SetSetting('update.autoCheck', next ? 'on' : 'off').catch(() => {});
+      return next;
+    });
+  }
   const dirty = (Object.keys(DEFAULT_APPEARANCE) as (keyof Appearance)[]).some((k) => appearance[k] !== DEFAULT_APPEARANCE[k]);
   const reset = () => onPatch({ ...DEFAULT_APPEARANCE });
 
@@ -98,6 +120,45 @@ export default function SettingsSheet({ open, onClose, appearance, onPatch, stor
       <div className="grid gap-3 px-4 py-4">
         {stab === 'general' && (
           <div className="grid items-start gap-3">
+            <Section icon={RefreshCw} title={`Updates · ReadGate ${version || 'dev'}`}>
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5">
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-zinc-200">
+                    {updateInfo?.updateAvailable
+                      ? `${updateInfo.latestVersion} is available — you have ${updateInfo.currentVersion || version || 'dev'}`
+                      : updateInfo
+                        ? `You're on the latest version (${updateInfo.currentVersion || version || 'dev'})`
+                        : `Version ${version || 'dev'} — check GitHub Releases for updates`}
+                  </div>
+                  <div className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">
+                    {updateInfo?.updateAvailable
+                      ? (updateInfo.canInstall
+                        ? 'One click downloads the new build and restarts the app on it.'
+                        : 'Download the new build, then drag ReadGate.app to Applications.')
+                      : 'Releases are published automatically on every app change.'}
+                  </div>
+                </div>
+                <Button variant="outline" className="!py-1.5 text-[11px]" onClick={onCheckUpdates} disabled={!!updateChecking}>
+                  {updateChecking ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Check now
+                </Button>
+              </div>
+              {updateInfo?.updateAvailable && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <Button variant="emerald" className="!py-1.5 text-[11px]" onClick={onInstallUpdate} disabled={!!updateBusy}>
+                    {updateBusy ? <Loader2 size={12} className="animate-spin" /> : <ArrowDownToLine size={12} />}
+                    {updateInfo.canInstall ? `Download & install ${updateInfo.latestVersion}` : `Download ${updateInfo.latestVersion}`}
+                  </Button>
+                  <Button variant="outline" className="!py-1.5 text-[11px]" onClick={onOpenRelease}>
+                    <ExternalLink size={12} /> Release notes
+                  </Button>
+                </div>
+              )}
+              {updateMsg && <div className="mt-2 font-mono text-[11px] leading-relaxed text-emerald-200/80">{updateMsg}</div>}
+              <div className="mt-2 flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2">
+                <span className="text-xs text-zinc-300">Check automatically <span className="text-zinc-600">· once a day on startup</span></span>
+                <Switch on={autoCheck} onToggle={toggleAutoCheck} />
+              </div>
+            </Section>
             <Section icon={PencilLine} title="Table editing (writes)">
               <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5">
                 <div className="min-w-0">

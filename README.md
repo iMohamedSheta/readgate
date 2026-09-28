@@ -34,6 +34,22 @@ on Windows). Override the folder with `READGATE_HOME` (also used to run an isola
 `ReadGate --version` prints the embedded release tag (`dev` for local builds;
 Settings → AI access shows it too). `ReadGate mcp` runs the MCP server on stdio.
 
+## Updating
+
+The app checks [GitHub Releases](https://github.com/iMohamedSheta/ReadGate/releases/latest)
+for a newer build: once a day on startup (Settings → General → Updates toggles
+it off), plus a manual **Check now** button. When an update is found a banner
+appears under the menu with the release notes.
+
+- **Windows / Linux:** one click — **Download & install** fetches the asset to
+  `~/Downloads`, swaps the binary, and restarts the app on the new version.
+- **macOS:** the `.zip` is downloaded to `~/Downloads`; unzip it and drag
+  `ReadGate.app` to Applications (same unsigned-app flow as a fresh install).
+
+Downloads only ever come from `github.com` / `*.githubusercontent.com` over
+HTTPS, and the banner offers **Skip this version** per release. Forks can point
+the checker at their own repo with `READGATE_UPDATE_REPO=owner/repo`.
+
 ## Contents
 
 - [Engines](#engines)
@@ -41,6 +57,7 @@ Settings → AI access shows it too). `ReadGate mcp` runs the MCP server on stdi
 - [Browse, Query, Doctor](#browse-query-doctor)
 - [Table editing (app writes)](#table-editing-app-writes)
 - [MCP — let the AI read your fleet](#mcp--let-the-ai-read-your-fleet)
+- [Updating](#updating)
 - [Data, troubleshooting](#data-troubleshooting)
 - [Build from source](#build-from-source)
 - [Releasing](#releasing)
@@ -202,6 +219,8 @@ ReadGate/
     mcpserver/                # MCP over stdio + HTTP (14 tools, names only)
     shotseed/                 # synthetic demo profile for good screenshots
     version/                  # release tag baked via ldflags
+    update/                   # GitHub Releases check + download + self-install
+  update_bindings.go          # Wails bindings: CheckForUpdates, DownloadAndInstallUpdate…
   frontend/src/               # React UI (fleet, browse, query, doctor, MCP, settings)
   scripts/                    # next-version.ps1, screenshot.ps1 (Windows), screenshot.sh (mac/Linux)
   docs/screenshot.png         # app screenshot, seeded demo data (README + releases)
