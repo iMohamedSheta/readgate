@@ -1,0 +1,25 @@
+.DS_Store
+Thumbs.db
+node_modules/
+frontend/node_modules/
+frontend/dist/
+build/bin/
+*.exe
+.readgate-tmp/
+
+# Go build/test artifacts
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Env + logs
+.env
+.env*.local
+*.log
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
