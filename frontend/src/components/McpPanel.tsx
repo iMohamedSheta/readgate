@@ -319,12 +319,12 @@ export default function McpPanel({ fleet, mcpUrl }: { fleet: any; mcpUrl: string
         )}
       </Card>
 
-      {/* setup + tools */}
-      <div className="grid items-start gap-3 xl:grid-cols-5">
-        <Card className="p-4 xl:col-span-2">
+      {/* setup + tools — setup full width on top, tools full width below */}
+      <div className="grid items-start gap-3">
+        <Card className="w-full p-4">
           <div className="mb-1 flex items-center gap-1.5 text-[13px] font-semibold text-zinc-100"><Copy size={14} className="text-sky-300" /> Connection setup</div>
           <div className="mb-2.5 text-[11px] leading-relaxed text-zinc-500">Expand your client, paste the config, restart its session. Opencode first — it is the primary target.</div>
-          <div className="grid gap-1.5">
+          <div className="grid grid-cols-1 gap-1.5 items-start">
             <SetupSection id="opencode" icon={SquareTerminal} accent="acc-text" title="opencode · local stdio" file="opencode.json — project root or ~/.config/opencode/" badge="START HERE" openId={openSetup} onToggle={toggleSetup}>
               <Steps items={[
                 'Copy the JSON below and merge it into opencode.json under the top-level "mcp" key.',
@@ -370,7 +370,7 @@ export default function McpPanel({ fleet, mcpUrl }: { fleet: any; mcpUrl: string
           </div>
         </Card>
 
-        <Card className="p-4 xl:col-span-3">
+        <Card className="w-full p-4">
           <div className="mb-1 flex items-center gap-1.5 text-[13px] font-semibold text-zinc-100"><Braces size={14} className="text-indigo-300" /> Tools the AI sees</div>
           <div className="mb-2 text-[11px] text-zinc-500">Click any tool for parameters, an example call, and when to use it.</div>
           <div className="relative mb-2">

@@ -3,6 +3,8 @@
 import {model} from '../models';
 import {main} from '../models';
 
+export function BinaryName():Promise<string>;
+
 export function ClaudeConfig():Promise<string>;
 
 export function ClearLogs():Promise<void>;
