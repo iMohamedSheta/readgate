@@ -164,8 +164,10 @@ func (a *App) TestConnection(req TestRequest) []model.CheckResult {
 	}
 
 	if req.AutoProvision {
-		if req.AdminUser == "" || req.AdminPassword == "" {
-			return []model.CheckResult{{Key: "provision", Label: "Create dedicated read-only user", Detail: "admin user + password required for automatic setup"}}
+		// Local direct connections often use trust/peer auth with no
+		// password — allow an empty admin password and just try it.
+		if req.AdminUser == "" {
+			return []model.CheckResult{{Key: "provision", Label: "Create dedicated read-only user", Detail: "admin user required for automatic setup (password may be empty for local trust auth — it will be tried as-is)"}}
 		}
 		if aiPass == "" {
 			aiPass = provision.RandomPassword(28)
@@ -205,13 +207,15 @@ type AdminTestRequest struct {
 
 // TestAdminConnection checks ONLY the temporary admin leg:
 // SSH → server login → create-user privilege → target DB exists.
+// An empty password is allowed: local trust-auth setups have none,
+// so it is tried as-is instead of refused up front.
 func (a *App) TestAdminConnection(req AdminTestRequest) []model.CheckResult {
 	fam := engines.FamilyOf(req.Source.Engine)
 	if fam != engines.FamilyPostgres && fam != engines.FamilyMySQL && fam != engines.FamilyMSSQL {
 		return []model.CheckResult{{Key: "adm-auth", Label: "Admin credentials", Detail: "standalone admin login is a server-engine step — SQLite/Turso verify in one pass"}}
 	}
-	if req.AdminUser == "" || req.AdminPassword == "" {
-		return []model.CheckResult{{Key: "adm-auth", Label: "Admin credentials", Detail: "enter the temporary admin user + password first"}}
+	if req.AdminUser == "" {
+		return []model.CheckResult{{Key: "adm-auth", Label: "Admin credentials", Detail: "enter the temporary admin user first (password may be empty for local trust auth)"}}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -235,13 +239,14 @@ type ProvisionRequest struct {
 
 // ProvisionAIUser runs ONLY the create/reset step (create login + grants +
 // proof) using temp admin creds. The admin password is never stored.
+// An empty admin password is allowed and tried as-is (local trust auth).
 func (a *App) ProvisionAIUser(req ProvisionRequest) []model.CheckResult {
 	fam := engines.FamilyOf(req.Source.Engine)
 	if fam != engines.FamilyPostgres && fam != engines.FamilyMySQL && fam != engines.FamilyMSSQL {
 		return []model.CheckResult{{Key: "provision", Label: "Create dedicated read-only user", Detail: "standalone provisioning is a server-engine step — SQLite/Turso need no users"}}
 	}
-	if req.AdminUser == "" || req.AdminPassword == "" {
-		return []model.CheckResult{{Key: "provision", Label: "Create dedicated read-only user", Detail: "enter the temporary admin user + password first"}}
+	if req.AdminUser == "" {
+		return []model.CheckResult{{Key: "provision", Label: "Create dedicated read-only user", Detail: "enter the temporary admin user first (password may be empty for local trust auth)"}}
 	}
 	if req.AIUser == "" || req.AIPassword == "" {
 		return []model.CheckResult{{Key: "provision", Label: "Create dedicated read-only user", Detail: "AI user + password are required"}}

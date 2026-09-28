@@ -382,7 +382,7 @@ export default function AddDatabaseWizard({ open, clusters, initial, editing, on
             {form.setup === 'auto' ? (
               <div className="grid grid-cols-2 gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3.5">
                 <Field label="Admin user (temporary)"><Input value={form.adminUser} onChange={(e) => set('adminUser', e.target.value)} placeholder="postgres" /></Field>
-                <Field label="Admin password (never stored)" hint="Used once to CREATE ROLE, then discarded."><PasswordInput value={form.adminPassword} onChange={(v) => set('adminPassword', v)} /></Field>
+                <Field label="Admin password (never stored)" hint="Used once to CREATE ROLE, then discarded. Leave empty for local trust auth — it will be tried as-is."><PasswordInput value={form.adminPassword} onChange={(v) => set('adminPassword', v)} placeholder="empty = try without password" /></Field>
                 <div className="col-span-2 flex flex-wrap items-center gap-1.5 border-t border-zinc-800 pt-2.5">
                   <Button variant="outline" className="!py-1 text-[11px]" onClick={() => runStep('admin')} disabled={stepBusy !== '' || testing}>
                     {stepBusy === 'admin' ? <Loader2 size={12} className="animate-spin" /> : <KeyRound size={12} />} Test admin login
