@@ -619,7 +619,7 @@ export default function App() {
         <div className="flex items-center gap-2 px-3 pb-2.5 pt-3">
           <img
             src={appearance.theme === 'light' ? '/light.png' : '/dark.png'}
-            alt="readgate"
+            alt="ReadGate"
             className="h-8 w-auto max-w-[150px] shrink-0 object-contain"
             draggable={false}
           />

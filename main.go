@@ -45,7 +45,7 @@ func main() {
 	}
 
 	err = wails.Run(&options.App{
-		Title:     "readgate",
+		Title:     "ReadGate",
 		Width:     1380,
 		Height:    900,
 		MinWidth:  900,
