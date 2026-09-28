@@ -104,7 +104,18 @@ jobs:
       - name: Install Wails CLI
         shell: bash
         run: |
-          go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.2
+          set -e
+          # Module downloads + sumdb verification cross HTTP/2 — GitHub runners
+          # see transient INTERNAL_ERROR stream resets, so retry with backoff
+          # instead of failing the whole matrix on one flaky tile fetch.
+          for i in 1 2 3 4 5; do
+            if go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.2; then
+              break
+            fi
+            if [ "$i" = 5 ]; then echo "wails install failed after 5 attempts" >&2; exit 1; fi
+            echo "wails install attempt $i failed — retrying in $((i * 15))s…"
+            sleep $((i * 15))
+          done
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Install frontend dependencies

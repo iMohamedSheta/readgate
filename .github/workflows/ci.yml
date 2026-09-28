@@ -59,7 +59,15 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           set -e
-          go install honnef.co/go/tools/cmd/staticcheck@latest
+          # Same transient sumdb/proxy flakes as the release workflow — retry.
+          for i in 1 2 3 4 5; do
+            if go install honnef.co/go/tools/cmd/staticcheck@latest; then
+              break
+            fi
+            if [ "$i" = 5 ]; then echo "staticcheck install failed after 5 attempts" >&2; exit 1; fi
+            echo "staticcheck install attempt $i failed — retrying in $((i * 15))s…"
+            sleep $((i * 15))
+          done
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Staticcheck — bug detection
