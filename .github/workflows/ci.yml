@@ -12,10 +12,12 @@ concurrency:
 
 jobs:
   backend:
-    name: Go tests / static analysis / lint
-    # Windows: this ships as a Windows-only exe (frameless, WebView2).
-    # Windows CI compiles and tests exactly what ships, with zero setup.
-    runs-on: windows-latest
+    name: Go tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: bash
@@ -44,16 +46,28 @@ jobs:
       - name: Vet (static analysis)
         run: go vet ./...
 
+      - name: Shot-seed smoke test (demo profile for screenshots)
+        run: |
+          set -e
+          export READGATE_HOME="$RUNNER_TEMP/readgate-shot-ci"
+          rm -rf "$READGATE_HOME"
+          go run . --shot-seed
+          test -f "$READGATE_HOME/shot-demo/shop.db"
+          test -f "$READGATE_HOME/readgate.db"
+
       - name: Staticcheck (deep static analysis + style lint)
+        if: runner.os == 'Windows'
         run: |
           set -e
           go install honnef.co/go/tools/cmd/staticcheck@latest
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Staticcheck — bug detection
+        if: runner.os == 'Windows'
         run: staticcheck ./...
 
       - name: Style lint
+        if: runner.os == 'Windows'
         run: staticcheck -checks "all" ./...
 
   frontend:
@@ -77,3 +91,25 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
+
+      - name: Check no hardcoded local paths leak
+        run: |
+          set -e
+          if grep -rn "E:\\\\laragon\|C:\\\\Users\\\\MohamedSheta" frontend/src/; then
+            echo "Hardcoded local path found in frontend — use portable defaults." >&2
+            exit 1
+          fi
+
+  screenshot-scripts:
+    name: Screenshot scripts lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Shellcheck + pwsh syntax
+        run: |
+          set -e
+          bash -n scripts/screenshot.sh
+          command -v shellcheck >/dev/null && shellcheck -S warning scripts/screenshot.sh || echo "(shellcheck not installed — bash -n passed)"
+          test -f scripts/screenshot.ps1

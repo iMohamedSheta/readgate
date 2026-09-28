@@ -305,7 +305,7 @@ export default function McpPanel({ fleet, mcpUrl }: { fleet: any; mcpUrl: string
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-300"><Plug2 size={18} /></div>
         <div className="min-w-0 flex-1">
           <div className="text-[15px] font-semibold text-white">MCP server — the AI talks to your fleet here</div>
-          <div className="mt-0.5 text-xs text-zinc-500"><code className="font-mono text-zinc-300">ReadGate.exe mcp</code> over stdio · names only, never hosts, keys, or passwords</div>
+          <div className="mt-0.5 text-xs text-zinc-500"><code className="font-mono text-zinc-300">ReadGate mcp</code> over stdio · names only, never hosts, keys, or passwords</div>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge tone="green"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> stdio · local</Badge>
@@ -332,7 +332,7 @@ export default function McpPanel({ fleet, mcpUrl }: { fleet: any; mcpUrl: string
                 'Verify: opencode run "using readgate fleet_overview, which sources are ready?"',
               ]} />
               <ConfigBlock id="opencode" json={cfgs.opencode || 'loading…'} copiedId={copiedId} onCopy={copyBlock} />
-              <div className="text-[11px] leading-relaxed text-zinc-500">opencode launches <code className="font-mono text-zinc-300">ReadGate.exe mcp</code> itself — no port, no app window needed. If you move the exe, reopen this tab to refresh the path.</div>
+              <div className="text-[11px] leading-relaxed text-zinc-500">opencode launches <code className="font-mono text-zinc-300">ReadGate mcp</code> itself — no port, no app window needed. If you move the binary, reopen this tab to refresh the path.</div>
             </SetupSection>
 
             <SetupSection id="claude" icon={MessageSquare} accent="text-orange-300" title="Claude Desktop" file="%APPDATA%\\Claude\\claude_desktop_config.json" openId={openSetup} onToggle={toggleSetup}>

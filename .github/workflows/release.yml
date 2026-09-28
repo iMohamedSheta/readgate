@@ -9,9 +9,14 @@ name: Release
 #   "BREAKING CHANGE" or "type!:"   -> major bump (X.0.0)
 #   anything else (docs, chore...)  -> patch bump
 # Add "[skip release]" to the HEAD commit message to skip publishing.
-# The Windows exe is built with Wails, screenshotted while running with a
-# fresh isolated profile, and published as a GitHub Release
-# (ReadGate.exe + screenshot.png).
+#
+# Cross-platform: the same version is built on three runners —
+#   Windows (windows/amd64 → ReadGate.exe)
+#   macOS   (darwin/universal → ReadGate.app, zipped)
+#   Linux   (linux/amd64 → ReadGate binary, tarballed)
+# Each build seeds a synthetic demo profile (`--shot-seed`) and screenshots
+# the running app; the Windows shot stays the README/release hero
+# (screenshot.png) and per-OS shots ship alongside it.
 
 on:
   push:
@@ -25,9 +30,13 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: windows-latest
-    timeout-minutes: 30
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.version.outputs.skip }}
+      next: ${{ steps.version.outputs.next }}
+      bump: ${{ steps.version.outputs.bump }}
+      changelog: ${{ steps.version.outputs.changelog }}
     steps:
       - name: Checkout (full history + tags)
         uses: actions/checkout@v4
@@ -39,68 +48,160 @@ jobs:
         shell: pwsh
         run: ./scripts/next-version.ps1
 
+  build:
+    needs: version
+    if: needs.version.outputs.skip != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows/amd64
+            exe: build/bin/ReadGate.exe
+            asset: ReadGate-Windows-amd64.exe
+            shot: screenshot-windows.png
+          - os: macos-latest
+            platform: darwin/universal
+            exe: build/bin/ReadGate.app/Contents/MacOS/ReadGate
+            asset: ReadGate-macOS-universal.zip
+            shot: screenshot-macos.png
+          - os: ubuntu-latest
+            platform: linux/amd64
+            exe: build/bin/ReadGate
+            asset: ReadGate-Linux-amd64.tar.gz
+            shot: screenshot-linux.png
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Set up Go
-        if: steps.version.outputs.skip != 'true'
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
 
       - name: Set up Node
-        if: steps.version.outputs.skip != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Install Linux desktop deps (Wails/WebKit)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libvips-dev pkg-config xvfb scrot imagemagick gnome-screenshot
+
       - name: Install Wails CLI
-        if: steps.version.outputs.skip != 'true'
-        shell: pwsh
+        shell: bash
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.2
-          "$(go env GOPATH)/bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Install frontend dependencies
-        if: steps.version.outputs.skip != 'true'
         working-directory: frontend
         run: npm ci
 
-      - name: Build Windows exe
-        if: steps.version.outputs.skip != 'true'
-        run: wails build -platform windows/amd64 -o ReadGate.exe -ldflags "-X readgate/internal/version.Version=${{ steps.version.outputs.next }}"
+      - name: Build (${{ matrix.platform }})
+        shell: bash
+        run: wails build -platform ${{ matrix.platform }} -o ReadGate -ldflags "-X readgate/internal/version.Version=${{ needs.version.outputs.next }}"
 
-      - name: Screenshot the running app
-        if: steps.version.outputs.skip != 'true'
+      - name: Show build output
+        shell: bash
+        run: ls -la build/bin/
+
+      # ---- seeded screenshots (good, never real data) ----
+      - name: Screenshot the running app (Windows)
+        if: runner.os == 'Windows'
         shell: pwsh
         continue-on-error: true
         run: |
           ./scripts/screenshot.ps1 -ExePath "build/bin/ReadGate.exe" `
-            -OutFile "screenshot.png"
+            -OutFile "${{ matrix.shot }}"
+
+      - name: Screenshot the running app (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        continue-on-error: true
+        run: |
+          chmod +x scripts/screenshot.sh
+          ./scripts/screenshot.sh --exe "build/bin/ReadGate.app/Contents/MacOS/ReadGate" --out "${{ matrix.shot }}"
+
+      - name: Screenshot the running app (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        continue-on-error: true
+        run: |
+          chmod +x scripts/screenshot.sh
+          xvfb-run -a ./scripts/screenshot.sh --exe "build/bin/ReadGate" --out "${{ matrix.shot }}"
 
       - name: Stage release assets
-        if: steps.version.outputs.skip != 'true'
-        shell: pwsh
+        shell: bash
         run: |
-          New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item build/bin/ReadGate.exe dist/ReadGate.exe
-          if (Test-Path screenshot.png) { Copy-Item screenshot.png dist/screenshot.png }
-          Get-ChildItem dist
+          mkdir -p dist
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp build/bin/ReadGate.exe "dist/${{ matrix.asset }}"
+            cp build/bin/ReadGate.exe dist/ReadGate.exe
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            ditto -c -k --sequesterRsrc --keepParent build/bin/ReadGate.app "dist/${{ matrix.asset }}"
+          else
+            tar -czf "dist/${{ matrix.asset }}" -C build/bin ReadGate
+          fi
+          if [ -f "${{ matrix.shot }}" ]; then cp "${{ matrix.shot }}" dist/; fi
+          ls -la dist/
+        env:
+          RUNNER_OS: ${{ runner.os }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ runner.os }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    needs: [version, build]
+    if: needs.version.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Promote Windows shot to release hero
+        shell: bash
+        run: |
+          ls -la dist/
+          if [ -f dist/screenshot-windows.png ]; then cp dist/screenshot-windows.png dist/screenshot.png; fi
+          ls -la dist/
 
       - name: Publish GitHub Release
-        if: steps.version.outputs.skip != 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.next }}
-          name: ${{ steps.version.outputs.next }}
+          tag_name: ${{ needs.version.outputs.next }}
+          name: ${{ needs.version.outputs.next }}
           body: |
-            ## What's changed (${{ steps.version.outputs.bump }})
+            ## What's changed (${{ needs.version.outputs.bump }})
 
-            ${{ steps.version.outputs.changelog }}
+            ${{ needs.version.outputs.changelog }}
 
             ---
 
-            ![ReadGate app screenshot](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.next }}/screenshot.png)
+            ![ReadGate app screenshot](https://github.com/${{ github.repository }}/releases/download/${{ needs.version.outputs.next }}/screenshot.png)
 
-            **Download:** `ReadGate.exe` below — single file, no installer, no DLLs.
+            **Download for your OS:**
+
+            | OS | File | Notes |
+            |---|---|---|
+            | Windows 10/11 (x64) | `ReadGate-Windows-amd64.exe` (`ReadGate.exe` is the same file) | Single file, no installer, no DLLs. Double-click to run. |
+            | macOS (Universal: Intel + Apple Silicon) | `ReadGate-macOS-universal.zip` | Unzip, drag `ReadGate.app` to Applications, right-click → Open on first launch (unsigned build). `ReadGate mcp` speaks stdio for opencode. |
+            | Linux (x64) | `ReadGate-Linux-amd64.tar.gz` | Extract and run `./ReadGate`. Needs WebKitGTK on minimal distros (`libwebkit2gtk-4.1`). |
+
+            Data lives in `~/.readgate/readgate.db` on every OS (`%USERPROFILE%\.readgate` on Windows).
+            Screenshots are seeded demo data (`screenshot-windows/macos/linux.png`) — never a real database.
           files: dist/*

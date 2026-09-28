@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	goruntime "runtime"
 	"strings"
 	"time"
 
@@ -928,16 +929,30 @@ func (a *App) MCPConfig() string {
 }
 
 // exePath resolves this binary's path for MCP stdio configs.
+// Cross-platform: whatever the OS launched (ReadGate.exe on Windows,
+// ReadGate.app/Contents/MacOS/ReadGate on macOS, ReadGate on Linux).
 func exePath() string {
 	exe, err := os.Executable()
 	if err != nil || exe == "" {
-		exe = `E:\laragon\www\go\ReadGate\build\bin\ReadGate.exe`
+		if goruntime.GOOS == "windows" {
+			return "ReadGate.exe"
+		}
+		return "ReadGate"
 	}
 	return exe
 }
 
+// BinaryName is the file name clients see in setup guides
+// (ReadGate.exe on Windows, ReadGate elsewhere).
+func (a *App) BinaryName() string {
+	if goruntime.GOOS == "windows" {
+		return "ReadGate.exe"
+	}
+	return "ReadGate"
+}
+
 // OpencodeConfig returns the copy-paste JSON for opencode.json — LOCAL stdio
-// mode (goals parity): opencode launches `ReadGate.exe mcp` itself, no app
+// mode: opencode launches `ReadGate mcp` itself, no app
 // window or HTTP port needed. (The Claude "mcpServers" shape is silently
 // ignored by opencode, which surfaces as "Failed to get tools".)
 func (a *App) OpencodeConfig() string {
@@ -956,7 +971,7 @@ func (a *App) OpencodeConfig() string {
 
 // ClaudeConfig returns the copy-paste stdio JSON for Claude Desktop, Cursor,
 // Windsurf, Cline and any client using the {"mcpServers": ...} shape:
-// they launch `ReadGate.exe mcp` themselves, so no app window is needed.
+// they launch `ReadGate mcp` themselves, so no app window is needed.
 func (a *App) ClaudeConfig() string {
 	esc := strings.ReplaceAll(exePath(), `\`, `\\`)
 	return fmt.Sprintf(`{
@@ -1001,7 +1016,7 @@ func (a *App) TestMCP() string {
 		return resp.StatusCode, s
 	}
 	var sb strings.Builder
-	sb.WriteString("== stdio (`ReadGate.exe mcp`, goals parity) ==\n")
+	sb.WriteString("== stdio (`" + a.BinaryName() + " mcp`) ==\n")
 	sb.WriteString(testMCPStdio())
 	sb.WriteString("\n== http (127.0.0.1:9413/mcp, kept for other clients) ==\n")
 	st, b := call(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"readgate-selftest","version":"0.1.0"}}}`)

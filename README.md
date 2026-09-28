@@ -3,7 +3,7 @@
 [![CI](https://github.com/iMohamedSheta/ReadGate/actions/workflows/ci.yml/badge.svg)](https://github.com/iMohamedSheta/ReadGate/actions/workflows/ci.yml)
 [![Release](https://github.com/iMohamedSheta/ReadGate/actions/workflows/release.yml/badge.svg)](https://github.com/iMohamedSheta/ReadGate/releases/latest)
 
-One `ReadGate.exe`, no installer, no DLLs. Your database fleet, AI-readable —
+One binary, no installer. Your database fleet, AI-readable —
 credentials never leave this box.
 
 ```
@@ -14,16 +14,25 @@ A source enables **only after the gateway proves the identity is read-only**
 (connectivity ✓, authentication ✓, read access ✓, write denied ✓).
 
 ![ReadGate app screenshot](docs/screenshot.png)
+_Screenshot uses synthetic demo data (2 clusters, 3 local SQLite sources) — never a real database._
 
 ## Download
 
-1. Open the [**latest release**](https://github.com/iMohamedSheta/ReadGate/releases/latest)
-2. Under **Assets**, download **`ReadGate.exe`** (single file, no installer, no DLLs)
-3. Double-click `ReadGate.exe` — data lives in `%USERPROFILE%\.readgate\readgate.db`
-4. If Windows SmartScreen warns (the exe is unsigned): **More info → Run anyway**
+Open the [**latest release**](https://github.com/iMohamedSheta/ReadGate/releases/latest)
+and pick your OS. Per-OS screenshots (`screenshot-windows/macos/linux.png`) ship next
+to the binaries — all seeded demo data.
 
-`ReadGate.exe --version` prints the embedded release tag (`dev` for local builds;
-Settings → AI access shows it too).
+| OS | File | Run |
+|---|---|---|
+| Windows 10/11 (x64) | `ReadGate-Windows-amd64.exe` (`ReadGate.exe` is the same file) | Double-click. If SmartScreen warns (unsigned): **More info → Run anyway** |
+| macOS (Universal: Intel + Apple Silicon) | `ReadGate-macOS-universal.zip` | Unzip, drag `ReadGate.app` to Applications, right-click → Open on first launch (unsigned) |
+| Linux (x64) | `ReadGate-Linux-amd64.tar.gz` | `tar xzf … && ./ReadGate` (needs WebKitGTK on minimal distros: `libwebkit2gtk-4.1`) |
+
+Data lives in `~/.readgate/readgate.db` on every OS (`%USERPROFILE%\.readgate\readgate.db`
+on Windows). Override the folder with `READGATE_HOME` (also used to run an isolated copy).
+
+`ReadGate --version` prints the embedded release tag (`dev` for local builds;
+Settings → AI access shows it too). `ReadGate mcp` runs the MCP server on stdio.
 
 ## Contents
 
@@ -92,7 +101,7 @@ delete rows, then **Apply** — every batch shows its exact SQL and asks first.
 
 ## MCP — let the AI read your fleet
 
-The same exe is an **MCP server** (protocol 2024-11-05): `ReadGate.exe mcp`
+The same binary is an **MCP server** (protocol 2024-11-05): `ReadGate mcp`
 speaks stdio, so opencode launches it directly — no window, no port. The AI
 sees **names only** (clusters, sources, tables, columns) — never hosts, ports,
 users, or passwords. The MCP tab has per-client setup guides (opencode first),
@@ -111,31 +120,43 @@ a 14-tool reference with examples, the recommended workflow, and a self-test.
 
 ## Data, troubleshooting
 
-- Store: `%USERPROFILE%\.readgate\readgate.db` (SQLite WAL) + `key.bin` (`0600`).
+- Store: `~/.readgate/readgate.db` (SQLite WAL) + `key.bin` (`0600`).
   Override the folder with `READGATE_HOME` (also used to run an isolated copy).
 - Passwords are AES-GCM encrypted; backend errors (never secrets) land in
   Settings → Logs — reproduce the error, hit reload, paste the red lines.
-- If the app ever shows a blank page: end **every** `ReadGate.exe` in Task
-  Manager, then launch fresh.
+- If the app ever shows a blank page: quit **every** ReadGate process, then launch fresh.
+  (Windows: end them in Task Manager. macOS: Cmd+Q. Linux: `pkill ReadGate`.)
 
 ## Build from source
 
 ```bash
 go mod tidy
-wails build -platform windows/amd64 -o ReadGate.exe   # single file in build/bin
+# Windows:
+wails build -platform windows/amd64 -o ReadGate.exe   # build/bin/ReadGate.exe
+# macOS (Universal: Intel + Apple Silicon):
+wails build -platform darwin/universal -o ReadGate    # build/bin/ReadGate.app
+# Linux:
+wails build -platform linux/amd64 -o ReadGate         # build/bin/ReadGate
 wails dev            # desktop + hot reload
 cd frontend && npm install && npm run dev   # frontend only
 ```
 
-`ReadGate.exe mcp` runs the MCP server on stdio (used by opencode `type: local`).
+Linux needs WebKitGTK dev packages once:
+`sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev`.
+
+`ReadGate mcp` runs the MCP server on stdio (used by opencode `type: local`).
+`ReadGate --shot-seed` seeds a synthetic demo profile (used for screenshots).
 
 ## Releasing
 
 Every push to `main` publishes a new GitHub Release automatically
-(`.github/workflows/release.yml`), same system as goals: the exe is built with
-Wails with the version baked in
-(`-ldflags "-X readgate/internal/version.Version=v…"`), screenshotted while
-running, and uploaded as `ReadGate.exe` + `screenshot.png`.
+(`.github/workflows/release.yml`): the same version is built on Windows, macOS,
+and Linux with the version baked in
+(`-ldflags "-X readgate/internal/version.Version=v…"`), each seeded
+(`--shot-seed`) and screenshotted while running, and uploaded as
+`ReadGate-Windows-amd64.exe` (+ `ReadGate.exe` alias),
+`ReadGate-macOS-universal.zip`, `ReadGate-Linux-amd64.tar.gz`,
+plus `screenshot.png` (Windows hero) and per-OS shots.
 
 The version bump follows [Conventional Commits](https://www.conventionalcommits.org/):
 
@@ -153,10 +174,18 @@ Pull requests and pushes run `CI` instead: `go build`, `go test`, `go vet`,
 `staticcheck` (bug detection) plus `staticcheck -checks "all"` (style lint),
 and the frontend `vite build`.
 
-Refresh the docs screenshot any time (uses your live profile, window only):
+Refresh the docs screenshot any time (seeded demo profile, never your live data):
 
 ```powershell
+# Windows:
 ./scripts/screenshot.ps1 -OutFile "docs/screenshot.png"
+```
+
+```bash
+# macOS / Linux (Linux CI runs under xvfb-run):
+./scripts/screenshot.sh --out "docs/screenshot.png"
+# Linux headless:
+xvfb-run -a ./scripts/screenshot.sh --exe build/bin/ReadGate --out docs/screenshot.png
 ```
 
 ## Project layout
@@ -171,8 +200,9 @@ ReadGate/
     guard/                    # read-only + write SQL validation
     store/                    # SQLite + AES-GCM secrets + settings + write logins
     mcpserver/                # MCP over stdio + HTTP (14 tools, names only)
+    shotseed/                 # synthetic demo profile for good screenshots
     version/                  # release tag baked via ldflags
   frontend/src/               # React UI (fleet, browse, query, doctor, MCP, settings)
-  scripts/                    # next-version.ps1, screenshot.ps1
-  docs/screenshot.png         # app screenshot (README + releases)
+  scripts/                    # next-version.ps1, screenshot.ps1 (Windows), screenshot.sh (mac/Linux)
+  docs/screenshot.png         # app screenshot, seeded demo data (README + releases)
 ```

@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"readgate/internal/mcpserver"
+	"readgate/internal/shotseed"
 	"readgate/internal/version"
 
 	"github.com/wailsapp/wails/v2"
@@ -18,13 +19,23 @@ import (
 var assets embed.FS
 
 func main() {
-	// MCP stdio mode: `ReadGate.exe mcp` — same single binary, no window,
-	// no HTTP. opencode launches it as `type: local` (goals parity).
+	// MCP stdio mode: `ReadGate mcp` — same single binary, no window,
+	// no HTTP. opencode launches it as `type: local`.
 	if len(os.Args) > 1 && (os.Args[1] == "mcp" || os.Args[1] == "--mcp") {
 		os.Exit(mcpserver.Run())
 	}
 	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v" || os.Args[1] == "version") {
 		fmt.Println(version.Version)
+		return
+	}
+	// Screenshot seed: `ReadGate --shot-seed` builds a synthetic demo
+	// profile (READGATE_HOME) so release screenshots never leak real data.
+	if len(os.Args) > 1 && (os.Args[1] == "--shot-seed" || os.Args[1] == "shot-seed") {
+		if err := shotseed.Run(); err != nil {
+			fmt.Fprintln(os.Stderr, "shot-seed:", err)
+			os.Exit(1)
+		}
+		fmt.Println("demo profile seeded at " + os.Getenv("READGATE_HOME"))
 		return
 	}
 

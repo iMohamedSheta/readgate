@@ -25,8 +25,8 @@ const demoClusters: Cluster[] = [
 ];
 
 const demoSources: Source[] = [
-  { id: 's1', name: 'Production', clusterId: 'c1', engine: 'postgres', mode: 'ssh', host: '127.0.0.1', port: 5432, database: 'connect_local', username: 'ai_readonly', password: '', sshHost: '203.0.113.10', sshPort: 22, sshUser: 'ubuntu', sshAuth: 'key', sshKeyPath: 'C:\\Users\\MohamedSheta\\.ssh\\id_rsa', status: 'ready', readOnlyVerified: true, createdAt: new Date().toISOString() },
-  { id: 's2', name: 'Analytics', clusterId: 'c2', engine: 'postgres', mode: 'ssh', host: '127.0.0.1', port: 5432, database: 'analytics', username: 'ai_readonly', password: '', sshHost: '203.0.113.11', sshPort: 22, sshUser: 'ubuntu', sshAuth: 'key', sshKeyPath: 'C:\\Users\\MohamedSheta\\.ssh\\id_rsa', status: 'draft', readOnlyVerified: false, createdAt: new Date().toISOString() },
+  { id: 's1', name: 'Production', clusterId: 'c1', engine: 'postgres', mode: 'ssh', host: '127.0.0.1', port: 5432, database: 'connect_local', username: 'ai_readonly', password: '', sshHost: '203.0.113.10', sshPort: 22, sshUser: 'ubuntu', sshAuth: 'key', sshKeyPath: '~/.ssh/id_rsa', status: 'ready', readOnlyVerified: true, createdAt: new Date().toISOString() },
+  { id: 's2', name: 'Analytics', clusterId: 'c2', engine: 'postgres', mode: 'ssh', host: '127.0.0.1', port: 5432, database: 'analytics', username: 'ai_readonly', password: '', sshHost: '203.0.113.11', sshPort: 22, sshUser: 'ubuntu', sshAuth: 'key', sshKeyPath: '~/.ssh/id_rsa', status: 'draft', readOnlyVerified: false, createdAt: new Date().toISOString() },
   { id: 's3', name: 'Billing', clusterId: 'c3', engine: 'postgres', mode: 'direct', host: '10.0.0.8', port: 5432, database: 'billing', username: 'ai_readonly', password: '', sshHost: '', sshPort: 22, sshUser: '', sshAuth: 'key', sshKeyPath: '', status: 'draft', readOnlyVerified: false, createdAt: new Date().toISOString() },
 ];
 
@@ -110,9 +110,9 @@ export const api = {
     { key: 'srv-role', label: 'Role "ai_readonly" exists in PG', ok: false, detail: 'role "ai_readonly" NOT FOUND in pg_roles — create it via automatic setup', durationMs: 200 },
     { key: 'srv-hba', label: 'pg_hba auth rules for 127.0.0.1', ok: true, detail: 'host all all 127.0.0.1/32 scram-sha-256', durationMs: 80 },
   ]),
-  DefaultSSHKey: binding('DefaultSSHKey', async (): Promise<string> => 'C:\\Users\\MohamedSheta\\.ssh\\id_rsa'),
-  PickSSHKey: binding('PickSSHKey', async (): Promise<string> => 'C:\\Users\\MohamedSheta\\.ssh\\id_rsa'),
-  PickSQLiteFile: binding('PickSQLiteFile', async (): Promise<string> => 'C:\\data\\app.db'),
+  DefaultSSHKey: binding('DefaultSSHKey', async (): Promise<string> => '~/.ssh/id_rsa'),
+  PickSSHKey: binding('PickSSHKey', async (): Promise<string> => '~/.ssh/id_rsa'),
+  PickSQLiteFile: binding('PickSQLiteFile', async (): Promise<string> => '~/data/app.db'),
   GetSchema: binding('GetSchema', async (): Promise<{ sourceName: string; tables: any[] }> => ({
     sourceName: 'Production',
     tables: [
@@ -143,8 +143,8 @@ export const api = {
   MCPStatus: binding('MCPStatus', async () => ({ running: true, url: 'http://127.0.0.1:9413' })),
   StartMCP: binding('StartMCP', async () => 'http://127.0.0.1:9413'),
   MCPConfig: binding('MCPConfig', async (): Promise<string> => `{\n  "mcpServers": {\n    "readgate": {\n      "url": "http://127.0.0.1:9413/mcp"\n    }\n  }\n}`),
-  OpencodeConfig: binding('OpencodeConfig', async (): Promise<string> => `{\n  "$schema": "https://opencode.ai/config.json",\n  "mcp": {\n    "readgate": {\n      "type": "local",\n      "command": ["E:\\\\laragon\\\\www\\\\go\\\\ReadGate\\\\build\\\\bin\\\\ReadGate.exe", "mcp"],\n      "enabled": true\n    }\n  }\n}`),
-  ClaudeConfig: binding('ClaudeConfig', async (): Promise<string> => `{\n  "mcpServers": {\n    "readgate": {\n      "command": "E:\\\\laragon\\\\www\\\\go\\\\ReadGate\\\\build\\\\bin\\\\ReadGate.exe",\n      "args": ["mcp"]\n    }\n  }\n}`),
+  OpencodeConfig: binding('OpencodeConfig', async (): Promise<string> => `{\n  "$schema": "https://opencode.ai/config.json",\n  "mcp": {\n    "readgate": {\n      "type": "local",\n      "command": ["ReadGate", "mcp"],\n      "enabled": true\n    }\n  }\n}`),
+  ClaudeConfig: binding('ClaudeConfig', async (): Promise<string> => `{\n  "mcpServers": {\n    "readgate": {\n      "command": "ReadGate",\n      "args": ["mcp"]\n    }\n  }\n}`),
   TestMCP: binding('TestMCP', async (): Promise<string> => 'stdio msg 1 → {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05",…}}\nstdio msg 2 → {"jsonrpc":"2.0","id":2,"result":{"tools":[…]}}\nstdio msg 3 → {"jsonrpc":"2.0","id":3,"result":{"content":[…]}}'),
   WriteMode: binding('WriteMode', async (): Promise<boolean> => false),
   SetWriteMode: binding('SetWriteMode', async (): Promise<void> => {}),
