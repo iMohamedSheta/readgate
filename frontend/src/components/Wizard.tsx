@@ -76,8 +76,8 @@ export default function AddDatabaseWizard({ open, clusters, initial, editing, on
   }, [open]);
 
   useEffect(() => {
-    api.GenerateProvisionSQL(form.engine, form.database || 'connect_local', form.aiUser || 'ai_readonly').then((s: any) => setSqlPreview(String(s))).catch(() => {});
-  }, [form.engine, form.database, form.aiUser]);
+    api.GenerateProvisionSQL(form.engine, form.database || 'connect_local', form.aiUser || 'ai_readonly', form.aiPassword || '').then((s: any) => setSqlPreview(String(s))).catch(() => {});
+  }, [form.engine, form.database, form.aiUser, form.aiPassword]);
 
   if (!open) return null;
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));

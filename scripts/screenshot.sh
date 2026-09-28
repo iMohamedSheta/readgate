@@ -8,8 +8,10 @@
 #   3. Capture the window to a PNG.
 #
 # Capture backends (first available wins):
-#   macOS : screencapture -l <window-id> (CGWindowID via Quartz, else -w interactive
-#           fallback, else full-screen -x). For CI, the window-id path is used.
+#   macOS : screencapture -l <window-id> (Quartz, when pyobjc exists),
+#           else screencapture -R<x,y,w,h> from the real window bounds,
+#           else fullscreen main monitor (-m). All non-interactive — never
+#           `-w`, which waits for a mouse click and hangs CI.
 #   Linux : gnome-screenshot -w, else import (ImageMagick), else scrot, else grim.
 #
 # On headless Linux CI, run under Xvfb (the release workflow does this):
@@ -88,7 +90,12 @@ mkdir -p "$(dirname "$OUT")"
 captured=0
 
 if [ "$OS" = "Darwin" ]; then
-  # Try window-id capture via Quartz so only the app window is shot.
+  # Bring the app forward. System Events works even when the app was launched
+  # via its raw binary (which LaunchServices may not know as "ReadGate").
+  osascript -e 'tell application "System Events" to set frontmost of (first process whose name contains "ReadGate") to true' 2>/dev/null || \
+    osascript -e 'tell application "ReadGate" to activate' 2>/dev/null || true
+
+  # 1) Exact window capture via Quartz window id (needs pyobjc; often absent on CI).
   WINID="$(python3 -c '
 import sys
 try:
@@ -105,11 +112,25 @@ except Exception as e:
     echo "Capturing macOS window $WINID -> $OUT"
     if screencapture -l "$WINID" -x "$OUT"; then captured=1; fi
   fi
+
+  # 2) Region capture from the window's real bounds (non-interactive).
   if [ "$captured" -eq 0 ]; then
-    echo "Falling back to foreground-window capture ..."
-    osascript -e 'tell application "ReadGate" to activate' 2>/dev/null || true
-    sleep 2
-    if screencapture -w -x "$OUT"; then captured=1; fi
+    BOUNDS="$(osascript -e 'tell application "System Events" to tell (first process whose name contains "ReadGate") to get {position, size} of window 1' 2>/dev/null | tr -cs '0-9' ' ' || true)"
+    # BOUNDS is now "x y w h" (possibly empty).
+    # shellcheck disable=SC2086
+    set -- $BOUNDS
+    if [ $# -ge 4 ] && [ "$3" -ge 800 ] && [ "$4" -ge 500 ]; then
+      echo "Capturing macOS window region $1,$2,$3,$4 -> $OUT"
+      if screencapture -x -R"$1,$2,$3,$4" "$OUT"; then captured=1; fi
+    else
+      echo "Could not read ReadGate window bounds (got: '${BOUNDS:-empty}')."
+    fi
+  fi
+
+  # 3) Last resort: fullscreen main monitor. Non-interactive, never hangs.
+  if [ "$captured" -eq 0 ]; then
+    echo "Capturing macOS main monitor fullscreen ..."
+    if screencapture -x -m "$OUT"; then captured=1; fi
   fi
 else
   # Linux: prefer gnome-screenshot -w (active window), then ImageMagick, scrot, grim.
